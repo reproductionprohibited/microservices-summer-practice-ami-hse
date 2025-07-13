@@ -29,4 +29,4 @@ docker-compose build --no-cache && docker-compose up -d && docker-compose logs -
 
 ## После того как запустили:
 
-На ```http://localhost:8001/docs``` лежит сервис ресторанов, на ```http://localhost:8002/docs``` лежит сервис заказов
+На ```http://localhost:8001/docs``` можно потестить сервис ресторанов, на ```http://localhost:8002/docs``` – сервис заказов
