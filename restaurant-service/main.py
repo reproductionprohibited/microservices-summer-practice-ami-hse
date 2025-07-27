@@ -7,7 +7,12 @@ from sqlmodel import select
 
 from common.database.dbsetup import init_db, SessionDep
 from common.database.models import MenuItem, Restaurant
-from common.database.schemas import MenuItemSchema, RestaurantSchema, RestaurantSchema
+from common.database.schemas import (
+    MenuItemOutSchema,
+    MenuItemSchema,
+    RestaurantOutSchema,
+    RestaurantSchema,
+)
 
 app = FastAPI(title="Restaurant Service API")
 
@@ -22,13 +27,13 @@ async def ping() -> tp.Dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/restaurants", response_model=tp.List[RestaurantSchema])
+@app.get("/restaurants", response_model=tp.List[RestaurantOutSchema])
 async def get_all_restaurants(session: SessionDep):
     restaurants = (await session.exec(select(Restaurant))).all()
     return restaurants
 
 
-@app.post("/restaurants", response_model=RestaurantSchema)
+@app.post("/restaurants", response_model=RestaurantOutSchema)
 async def create_restaurant(restaurant_schema: RestaurantSchema, session: SessionDep):
     restaurant = Restaurant(
         name=restaurant_schema.name,
@@ -41,7 +46,7 @@ async def create_restaurant(restaurant_schema: RestaurantSchema, session: Sessio
     return restaurant
 
 
-@app.get("/restaurants/{restaurant_id}", response_model=RestaurantSchema)
+@app.get("/restaurants/{restaurant_id}", response_model=RestaurantOutSchema)
 async def get_restaurant_by_id(restaurant_id: int, session: SessionDep):
     restaurant = (await session.exec(select(Restaurant).where(Restaurant.id == restaurant_id))).one_or_none()
     if restaurant is None:
@@ -49,7 +54,7 @@ async def get_restaurant_by_id(restaurant_id: int, session: SessionDep):
     return restaurant
 
 
-@app.get("/restaurants/by-name/{restaurant_name}", response_model=RestaurantSchema)
+@app.get("/restaurants/by-name/{restaurant_name}", response_model=RestaurantOutSchema)
 async def get_restaurant_by_name(restaurant_name: str, session: SessionDep):
     restaurant = (await session.exec(select(Restaurant).where(Restaurant.name == restaurant_name))).one_or_none()
     if restaurant is None:
@@ -57,7 +62,7 @@ async def get_restaurant_by_name(restaurant_name: str, session: SessionDep):
     return restaurant
 
 
-@app.put("/restaurants/{restaurant_id}", response_model=RestaurantSchema)
+@app.put("/restaurants/{restaurant_id}", response_model=RestaurantOutSchema)
 async def update_restaurant(restaurant_id: int, restaurant_schema: RestaurantSchema, session: SessionDep):
     restaurant = (await session.exec(select(Restaurant).where(Restaurant.id == restaurant_id))).one_or_none()
     if restaurant is None:
@@ -81,10 +86,8 @@ async def delete_restaurant(restaurant_id: int, session: SessionDep) -> tp.Dict[
     return {"message": f"Restaurant [{restaurant_id}] deleted"}
 
 
-@app.post("/restaurants/{restaurant_id}/menu-items")
-async def add_menu_item_to_restaurant(
-        restaurant_id: int, menu_item_schema: MenuItemSchema, session: SessionDep,
-) -> tp.Dict[str, str]:
+@app.post("/restaurants/{restaurant_id}/menu-items", response_model=MenuItemOutSchema)
+async def add_menu_item_to_restaurant(restaurant_id: int, menu_item_schema: MenuItemSchema, session: SessionDep):
     restaurant = (await session.exec(select(Restaurant).where(Restaurant.id == restaurant_id))).one_or_none()
     if restaurant is None:
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="Restaurant not found")
@@ -102,10 +105,10 @@ async def add_menu_item_to_restaurant(
     await session.refresh(menu_item)
     await session.refresh(restaurant)
 
-    return {"message": "Added menu item"}
+    return menu_item
 
 
-@app.get("/restaurants/{restaurant_id}/menu-items", response_model=tp.List[MenuItemSchema])
+@app.get("/restaurants/{restaurant_id}/menu-items", response_model=tp.List[MenuItemOutSchema])
 async def get_restaurant_menu_items(restaurant_id: int, session: SessionDep, only_available: bool = False):
     query = select(Restaurant).where(Restaurant.id == restaurant_id).options(selectinload(Restaurant.menu_items))
     restaurant = (await session.exec(query)).one_or_none()
@@ -118,7 +121,7 @@ async def get_restaurant_menu_items(restaurant_id: int, session: SessionDep, onl
     return menu_items
 
 
-@app.get("/menu-items/{menu_item_id}", response_model=MenuItemSchema)
+@app.get("/menu-items/{menu_item_id}", response_model=MenuItemOutSchema)
 async def get_menu_item_by_id(menu_item_id: int, session: SessionDep):
     menu_item = (await session.exec(select(MenuItem).where(MenuItem.id == menu_item_id))).one_or_none()
     if menu_item is None:
@@ -126,7 +129,7 @@ async def get_menu_item_by_id(menu_item_id: int, session: SessionDep):
     return menu_item
 
 
-@app.put("/menu-items/{menu_item_id}", response_model=MenuItemSchema)
+@app.put("/menu-items/{menu_item_id}", response_model=MenuItemOutSchema)
 async def update_menu_item(menu_item_id: int, menu_item_schema: MenuItemSchema, session: SessionDep):
     menu_item = (await session.exec(select(MenuItem).where(MenuItem.id == menu_item_id))).one_or_none()
     if menu_item is None:
@@ -143,11 +146,11 @@ async def update_menu_item(menu_item_id: int, menu_item_schema: MenuItemSchema, 
     return menu_item
 
 
-@app.delete("/menu-items/{menu_item_id}")
-async def delete_menu_item(menu_item_id: int, session: SessionDep) -> tp.Dict[str, str]:
+@app.delete("/menu-items/{menu_item_id}", response_model=MenuItemOutSchema)
+async def delete_menu_item(menu_item_id: int, session: SessionDep):
     menu_item = (await session.exec(select(MenuItem).where(MenuItem.id == menu_item_id))).one_or_none()
     if menu_item is None:
         raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="Menu item not found")
     await session.delete(menu_item)
     await session.commit()
-    return {"message": f"Menu item [{menu_item_id}] deleted"}
+    return menu_item

@@ -1,9 +1,8 @@
-import datetime
-import re
 import typing as tp
 
 import pydantic
 
+from common.database.models import OrderStatus
 
 class RestaurantSchema(pydantic.BaseModel):
     name: str = pydantic.Field(max_length=255)
@@ -17,6 +16,10 @@ class MenuItemSchema(pydantic.BaseModel):
     price: int = pydantic.Field(default=0, ge=0)
     is_available: bool = pydantic.Field(default=True)
     category: str = pydantic.Field(max_length=255)
+
+
+class MenuItemOutSchema(MenuItemSchema):
+    id: tp.Optional[int] = pydantic.Field(default=None)
 
 
 class RestaurantOutSchema(RestaurantSchema):
@@ -34,14 +37,16 @@ class OrderItemOutSchema(pydantic.BaseModel):
 
 
 class OrderOutSchema(pydantic.BaseModel):
+    id: tp.Optional[int] = pydantic.Field(default=None)
     customer_name: tp.Optional[str] = pydantic.Field(max_length=100)
     customer_phone: str = pydantic.Field(max_length=100)
     delivery_address: str = pydantic.Field(max_length=255)
     items: tp.List[OrderItemOutSchema]
+    status: OrderStatus
 
 
 class OrderInSchema(pydantic.BaseModel):
-    customer_name: tp.Optional[str] = pydantic.Field(max_length=100)
+    customer_name: tp.Optional[str] = pydantic.Field(max_length=100, default=None)
     customer_phone: str = pydantic.Field(max_length=100)
     delivery_address: str = pydantic.Field(max_length=255)
     restaurant_id: int
